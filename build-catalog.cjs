@@ -2,10 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 
-const sourceImagesDir = 'C:\\Users\\paola\\Proyectos Antigravity\\Ferreteria\\imputs pic\\Fiero';
-const excelFile = 'C:\\Users\\paola\\Proyectos Antigravity\\Ferreteria\\Catálogo Truper 2025 ML (1).xlsx';
+const sourceImagesBaseDir = 'C:\\Users\\paola\\Proyectos Antigravity\\Ferreteria\\Ferreteria_Data\\Images';
+const excelFile = 'C:\\Users\\paola\\Proyectos Antigravity\\Ferreteria\\Ferreteria_Data\\Prices_and_Catalogs\\Catálogo_Truper_2025_Mar_2026 Actualizado.xlsx';
 const publicCatalogDir = path.join(__dirname, 'public', 'catalog');
 const outputJsonFile = path.join(__dirname, 'src', 'data', 'fiero_catalog.json');
+
 
 // Ensure public catalog dir exists
 if (!fs.existsSync(publicCatalogDir)) {
@@ -29,18 +30,31 @@ workbook.SheetNames.forEach(sheetName => {
 });
 console.log(`Loaded ${allProductsMap.size} products from Excel.`);
 
-console.log('Scanning image folders...');
-const skuFolders = fs.readdirSync(sourceImagesDir).filter(f => fs.statSync(path.join(sourceImagesDir, f)).isDirectory());
+console.log('Scanning image folders in all brands...');
+const brandFolders = fs.readdirSync(sourceImagesBaseDir).filter(f => fs.statSync(path.join(sourceImagesBaseDir, f)).isDirectory());
 
 let catalog = [];
 let categoriesSet = new Map();
-
 let groupedProducts = new Map();
 let processedCount = 0;
 
-for (const sku of skuFolders) {
-    const images = fs.readdirSync(path.join(sourceImagesDir, sku)).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
-    if (images.length === 0) continue;
+for (const brandFolder of brandFolders) {
+    const brandPath = path.join(sourceImagesBaseDir, brandFolder);
+    console.log(`Processing brand: ${brandFolder}...`);
+    
+    const skuFolders = fs.readdirSync(brandPath).filter(f => {
+        try {
+            return fs.statSync(path.join(brandPath, f)).isDirectory();
+        } catch (e) {
+            return false;
+        }
+    });
+
+    for (const sku of skuFolders) {
+        const skuPath = path.join(brandPath, sku);
+        const images = fs.readdirSync(skuPath).filter(f => f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.png'));
+        if (images.length === 0) continue;
+
 
     const row = allProductsMap.get(sku);
     if (!row) continue;
@@ -51,11 +65,17 @@ for (const sku of skuFolders) {
     let mainImage = images.find(i => i.toLowerCase().includes(sku.toLowerCase()) && !i.toLowerCase().includes('fc')) || images[0];
 
     // copy image
-    const sourceImagePath = path.join(sourceImagesDir, sku, mainImage);
+    const sourceImagePath = path.join(skuPath, mainImage);
     const destImageName = `${sku}.jpg`;
     const destImagePath = path.join(publicCatalogDir, destImageName);
 
-    fs.copyFileSync(sourceImagePath, destImagePath);
+    try {
+        fs.copyFileSync(sourceImagePath, destImagePath);
+    } catch (e) {
+        console.error(`Error copying image for SKU ${sku}: ${e.message}`);
+        continue;
+    }
+
 
     const priceKey = Object.keys(row).find(k => k.toLowerCase().includes('precio público') || k.toLowerCase().includes('precio p'));
     const price = priceKey ? Number(row[priceKey]) : 0;
@@ -101,7 +121,8 @@ for (const sku of skuFolders) {
             price: price,
             originalPrice: originalPrice,
             category: categoryId,
-            brand: marcaKey ? row[marcaKey] : 'Fiero',
+            brand: marcaKey ? row[marcaKey] : brandFolder,
+
             image: `catalog/${destImageName}`, // Relative to base URL!
             rating: parseFloat((4.0 + (Math.random() * 1.0)).toFixed(1)),
             inStock: true,
@@ -127,7 +148,9 @@ for (const sku of skuFolders) {
         image: `catalog/${destImageName}`,
         description: fullDesc
     });
+    }
 }
+
 
 for (const [key, product] of groupedProducts.entries()) {
     if (product.variants.length === 1) {
@@ -142,7 +165,8 @@ for (const [key, product] of groupedProducts.entries()) {
         // Let's refine the master product name. 
         // e.g. "Kilo de alambre recocido calibre 15 en rollo de 1 kg"
         // Try to remove specific sizes.
-        product.name = product.variants[0].name.split(/[0-9]/)[0].replace(/de$/, '').trim() + " Fiero";
+        product.name = product.variants[0].name.split(/[0-9]/)[0].replace(/de$/, '').trim() + " " + product.brand;
+
         if (product.name.length < 5) product.name = product.variants[0].name; // fallback
     }
 

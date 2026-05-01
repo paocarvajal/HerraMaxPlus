@@ -3,8 +3,9 @@ import { ArrowRight, Truck, Clock, Shield, Star, Wrench, GraduationCap, Users } 
 import { Button } from "@/components/ui/button";
 import { products, categories } from "@/data/products";
 import ProductCard from "@/components/ProductCard";
-import heroImage from "@/assets/hero-tools.jpg";
+import heroImage from "@/assets/hero-cover.png";
 import { motion } from "framer-motion";
+
 
 const Index = () => {
   const featured = products.filter((p) => p.featured);

@@ -1,4 +1,15 @@
 import catalogData from './fiero_catalog.json';
+import pintumexData from './pintumex_catalog.json';
+
+const allCategories = [...catalogData.categories];
+pintumexData.categories.forEach(cat => {
+  if (!allCategories.find(c => c.id === cat.id)) {
+    allCategories.push(cat);
+  }
+});
+
+const allProducts = [...catalogData.products, ...pintumexData.products];
+
 
 export interface ProductVariant {
   id: string;
@@ -61,16 +72,17 @@ export interface BlogPost {
   image: string;
 }
 
-export const categories = catalogData.categories;
+export const categories = allCategories;
 
-export const products: Product[] = catalogData.products.map(p => ({
+export const products: Product[] = allProducts.map(p => ({
   ...p,
-  image: import.meta.env.BASE_URL + p.image,
+  image: p.image.startsWith('http') ? p.image : import.meta.env.BASE_URL + p.image,
   variants: p.variants ? p.variants.map(v => ({
     ...v,
-    image: import.meta.env.BASE_URL + v.image
+    image: v.image && !v.image.startsWith('http') ? import.meta.env.BASE_URL + v.image : v.image
   })) : undefined
 }));
+
 
 // We can clear these out or keep them empty since it's a clean start
 export const rentalTools: RentalTool[] = [];
