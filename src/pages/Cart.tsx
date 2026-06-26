@@ -2,9 +2,41 @@ import { Link } from "react-router-dom";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleCheckout = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/fiserv/payment-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ total: totalPrice })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Error al conectar con la pasarela de pagos');
+      }
+
+      if (data.paymentUrl) {
+        // Redirect user to Fiserv payment URL
+        window.location.href = data.paymentUrl;
+      } else {
+        throw new Error('No se recibió la liga de pago');
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Ocurrió un error al procesar el pago.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -63,8 +95,13 @@ const Cart = () => {
             <span>Envío</span>
             <span>Calculado al pagar</span>
           </div>
-          <Button className="w-full amber-gradient text-primary-foreground hover:opacity-90 font-semibold mb-3" size="lg">
-            Proceder al Pago
+          <Button 
+            className="w-full amber-gradient text-primary-foreground hover:opacity-90 font-semibold mb-3" 
+            size="lg"
+            onClick={handleCheckout}
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Generando Liga Segura..." : "Proceder al Pago"}
           </Button>
           <button onClick={clearCart} className="w-full text-center text-sm text-muted-foreground hover:text-destructive transition-colors">
             Vaciar carrito

@@ -1,5 +1,5 @@
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, Truck, Shield, RotateCcw, ChevronRight } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Star, ShoppingCart, Truck, Shield, RotateCcw, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +19,7 @@ const mockGallery = (mainImage: string) => [
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const product = products.find((p) => p.id === id);
 
@@ -62,19 +63,30 @@ const ProductDetail = () => {
 
   return (
     <div className="container section-padding">
+      {/* Mobile close button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className="fixed top-20 right-4 z-50 md:hidden rounded-full bg-background/80 backdrop-blur-sm border-border shadow-md"
+        onClick={() => navigate(-1)}
+        aria-label="Cerrar y volver al catálogo"
+      >
+        <X className="w-5 h-5 text-foreground" />
+      </Button>
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-6">
         <Link to="/" className="hover:text-foreground">Inicio</Link>
         <ChevronRight className="w-3 h-3" />
-        <Link to="/catalogo" className="hover:text-foreground">Catálogo</Link>
+        <button onClick={() => navigate(-1)} className="hover:text-foreground">Catálogo</button>
         <ChevronRight className="w-3 h-3" />
         {categoryObj && (
           <>
-            <Link to={`/catalogo?categoria=${categoryObj.id}`} className="hover:text-foreground">{categoryObj.name}</Link>
+            <button onClick={() => navigate(-1)} className="hover:text-foreground truncate max-w-[100px] sm:max-w-none">{categoryObj.name}</button>
             <ChevronRight className="w-3 h-3" />
           </>
         )}
-        <span className="text-foreground truncate max-w-[200px]">{product.name}</span>
+        <span className="text-foreground truncate max-w-[150px] sm:max-w-[200px]">{product.name}</span>
       </nav>
 
       {/* Main grid */}
